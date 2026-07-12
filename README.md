@@ -1,4 +1,4 @@
-# norapsunday
+# Norapsunday
 No Rap Sunday is a music project that is emphasizing playing non rap music on Sundays.
 The Sunday Gazette — No Rap Sunday
 A single-page, no-build interactive music player styled as a black-and-white Art Deco 2000s newspaper. Drop in your own MP3/WAV/FLAC files and a WebGL "orb" reacts to the real audio in your browser — nothing is uploaded anywhere.
