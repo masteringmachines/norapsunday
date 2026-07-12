@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE SUNDAY GAZETTE — No Rap Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Limelight&family=Poiret+One&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --ink:#141210; --paper:#f2efe6; --paper2:#eae6d8; --grey:#6b675e; --rule:#141210;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:'Playfair Display',serif;overflow-x:hidden}
+.mono{font-family:'IBM Plex Mono',monospace}
+.deco{font-family:'Limelight',cursive}
+.poiret{font-family:'Poiret One',cursive}
+
+/* newsprint texture */
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3'/><feColorMatrix values='0 0 0 0 0.93 0 0 0 0 0.92 0 0 0 0 0.88 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+
+.page{max-width:1040px;margin:0 auto;padding:28px 26px 60px;position:relative;z-index:2}
+
+/* ============ MASTHEAD ============ */
+.top-rule{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.15em;
+  border-top:3px double var(--ink);border-bottom:1px solid var(--ink);padding:6px 2px}
+.masthead{text-align:center;padding:26px 0 18px;position:relative}
+.masthead h1{font-family:'Limelight';font-size:clamp(38px,8vw,84px);letter-spacing:.04em;line-height:.95}
+.masthead .sub{font-family:'Poiret One';font-size:clamp(13px,2vw,18px);letter-spacing:.5em;text-transform:uppercase;margin-top:10px}
+/* deco fans flanking masthead */
+.fan{position:absolute;top:50%;transform:translateY(-58%);width:90px;height:90px;opacity:.9}
+.fan.l{left:0}.fan.r{right:0;transform:translateY(-58%) scaleX(-1)}
+.mast-rule{display:flex;align-items:center;gap:14px;margin:4px 0 0}
+.mast-rule::before,.mast-rule::after{content:'';flex:1;border-top:1px solid var(--ink)}
+.mast-rule .diamond{width:8px;height:8px;background:var(--ink);transform:rotate(45deg)}
+.dateline{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;
+  border-top:1px solid var(--ink);border-bottom:3px double var(--ink);padding:7px 2px;margin-top:10px}
+
+/* ============ HEADLINE ============ */
+.headline{text-align:center;padding:34px 20px 8px}
+.kicker{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.3em;margin-bottom:14px}
+.headline h2{font-size:clamp(30px,5.4vw,58px);font-weight:900;line-height:1.04;letter-spacing:-.01em}
+.headline h2 em{font-style:italic;font-weight:400}
+.standfirst{font-style:italic;font-size:16px;color:var(--grey);max-width:560px;margin:16px auto 0;line-height:1.6}
+
+/* ============ THE PRESS (player machine) ============ */
+.press{margin:34px 0 0;border:2px solid var(--ink);position:relative;background:var(--paper)}
+.press::before{content:'';position:absolute;inset:5px;border:1px solid var(--ink);pointer-events:none;z-index:5}
+/* deco corner brackets */
+.corner{position:absolute;width:26px;height:26px;z-index:6;pointer-events:none}
+.corner svg{width:100%;height:100%;stroke:var(--ink);fill:none;stroke-width:2}
+.corner.tl{top:-2px;left:-2px}.corner.tr{top:-2px;right:-2px;transform:scaleX(-1)}
+.corner.bl{bottom:-2px;left:-2px;transform:scaleY(-1)}.corner.br{bottom:-2px;right:-2px;transform:scale(-1)}
+
+.press-head{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--ink);
+  padding:12px 22px;font-family:'Poiret One';letter-spacing:.35em;font-size:13px;text-transform:uppercase}
+.press-head .lamp{width:10px;height:10px;border:1.5px solid var(--ink);border-radius:50%;transition:background .3s}
+.press-head .lamp.on{background:var(--ink);animation:lamppulse 1.4s ease-in-out infinite}
+@keyframes lamppulse{50%{opacity:.4}}
+
+.stage{position:relative;aspect-ratio:16/8.6;border-bottom:2px solid var(--ink);overflow:hidden;background:var(--paper)}
+#glCanvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+#glCanvas:active{cursor:grabbing}
+/* halftone dots overlay */
+.halftone{position:absolute;inset:0;pointer-events:none;opacity:.18;
+  background-image:radial-gradient(var(--ink) 1px,transparent 1.4px);background-size:6px 6px}
+.stage-osd{position:absolute;top:12px;left:16px;right:16px;display:flex;justify-content:space-between;
+  font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.15em;pointer-events:none}
+.stage-title{position:absolute;bottom:14px;left:0;right:0;text-align:center;pointer-events:none}
+.stage-title .t{font-family:'Limelight';font-size:clamp(15px,2.6vw,24px)}
+.stage-title .a{font-family:'Poiret One';font-size:11px;letter-spacing:.4em;text-transform:uppercase;margin-top:4px;color:var(--grey)}
+.drop-invite{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  text-align:center;padding:20px;pointer-events:none;transition:opacity .4s}
+.drop-invite.hide{opacity:0}
+.drop-invite .big{font-family:'Limelight';font-size:clamp(17px,3vw,28px)}
+.drop-invite .small{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.2em;color:var(--grey)}
+.drop-invite .keys{display:flex;gap:8px}
+.kbd{font-family:'IBM Plex Mono';font-size:9px;border:1px solid var(--ink);border-bottom-width:2.5px;border-radius:3px;padding:3px 8px}
+.stage.dragover{background:var(--paper2)}
+.stage.dragover::after{content:'RELEASE TO SET TYPE';position:absolute;inset:12px;border:2px dashed var(--ink);
+  display:flex;align-items:center;justify-content:center;font-family:'Poiret One';letter-spacing:.4em;font-size:13px}
+
+/* waveform — engraving style */
+.wave-row{border-bottom:2px solid var(--ink);padding:14px 22px;position:relative}
+#waveCanvas{width:100%;height:52px;display:block;cursor:pointer}
+.wave-time{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;margin-top:8px}
+.wave-time .mid{font-family:'Poiret One';letter-spacing:.35em;font-size:11px}
+
+/* transport row */
+.controls-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:18px 22px;gap:18px}
+.ledger{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;color:var(--grey)}
+.ledger b{color:var(--ink);font-weight:500}
+.ledger.r{text-align:right}
+.transport{display:flex;gap:12px;align-items:center;justify-content:center}
+.t-btn{width:46px;height:46px;border-radius:50%;cursor:pointer;background:var(--paper);color:var(--ink);
+  border:2px solid var(--ink);font-size:13px;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;box-shadow:3px 3px 0 var(--ink)}
+.t-btn:hover{background:var(--ink);color:var(--paper)}
+.t-btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.t-btn.main{width:62px;height:62px;font-size:17px;background:var(--ink);color:var(--paper)}
+.t-btn.main:hover{background:var(--paper);color:var(--ink)}
+.t-btn.tog{width:38px;height:38px;font-size:11px;box-shadow:2px 2px 0 var(--ink)}
+.t-btn.tog.on{background:var(--ink);color:var(--paper)}
+
+/* classified strip */
+.classified{border-top:2px solid var(--ink);display:flex;font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.1em;overflow:hidden;white-space:nowrap}
+.classified span{padding:8px 0;animation:ticker 26s linear infinite;display:inline-block}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ============ COLUMNS ============ */
+.columns{display:grid;grid-template-columns:1.5fr 1fr;gap:0;margin-top:38px;border-top:3px double var(--ink)}
+.col{padding:26px 26px 26px 0}
+.col+.col{border-left:1px solid var(--ink);padding-left:26px;padding-right:0}
+.col h3{font-family:'Limelight';font-size:21px;margin-bottom:6px}
+.col .rule-orn{display:flex;align-items:center;gap:8px;margin:8px 0 16px}
+.col .rule-orn::before,.col .rule-orn::after{content:'';flex:1;border-top:1px solid var(--ink)}
+.col .rule-orn i{width:6px;height:6px;background:var(--ink);transform:rotate(45deg)}
+.col p{font-size:14.5px;line-height:1.75;text-align:justify;hyphens:auto}
+.col p+p{margin-top:12px}
+.dropcap::first-letter{font-family:'Limelight';font-size:52px;float:left;line-height:.82;padding:4px 8px 0 0}
+.byline{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.2em;color:var(--grey);margin-bottom:14px}
+
+/* ============ VAULT — CLASSIFIEDS GRID ============ */
+.vault-sec{margin-top:44px}
+.vault-head{text-align:center;border-top:3px double var(--ink);border-bottom:1px solid var(--ink);padding:14px 0 12px}
+.vault-head h3{font-family:'Limelight';font-size:clamp(22px,3.6vw,34px)}
+.vault-head .s{font-family:'Poiret One';letter-spacing:.4em;font-size:11px;text-transform:uppercase;margin-top:6px;color:var(--grey)}
+.tray{display:grid;grid-template-columns:repeat(4,1fr);border-left:1px solid var(--ink);border-bottom:1px solid var(--ink);margin-top:0}
+.cart{border-right:1px solid var(--ink);border-top:1px solid var(--ink);padding:20px 16px;cursor:pointer;text-align:center;
+  transition:background .2s;position:relative;background:var(--paper)}
+.cart:hover{background:var(--paper2)}
+.cart.playing{background:var(--ink);color:var(--paper)}
+.cart.playing .rec-svg *[stroke]{stroke:var(--paper) !important}
+.cart.playing .rec-svg *[fill="#141210"]{fill:var(--paper) !important}
+.cart svg{width:78%;height:auto;margin:0 auto 12px;display:block}
+.cart.playing .rec-disc{animation:spin 3.4s linear infinite;transform-origin:60px 60px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.c-no{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.2em;margin-bottom:8px;color:var(--grey)}
+.cart.playing .c-no{color:var(--paper)}
+.c-title{font-weight:700;font-size:14px;line-height:1.25}
+.c-artist{font-family:'Poiret One';font-size:10.5px;letter-spacing:.25em;text-transform:uppercase;margin-top:5px}
+.c-dur{font-family:'IBM Plex Mono';font-size:9px;margin-top:8px;color:var(--grey)}
+.cart.playing .c-dur{color:var(--paper)}
+.tray-empty{grid-column:1/-1;border-top:1px solid var(--ink);border-right:1px solid var(--ink);padding:46px 20px;
+  text-align:center;font-style:italic;color:var(--grey);cursor:pointer}
+.tray-empty:hover{background:var(--paper2)}
+.add-card{border-right:1px solid var(--ink);border-top:1px solid var(--ink);display:flex;flex-direction:column;gap:8px;
+  align-items:center;justify-content:center;min-height:190px;cursor:pointer;font-family:'Poiret One';letter-spacing:.3em;font-size:11px}
+.add-card:hover{background:var(--paper2)}
+.add-card .plus{font-family:'Limelight';font-size:30px}
+
+/* ============ FOOTER ============ */
+.foot{margin-top:48px;text-align:center;border-top:3px double var(--ink);padding-top:22px}
+.foot .deco-line{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:14px}
+.foot .deco-line span{font-family:'Limelight';font-size:16px}
+.foot .tag{font-family:'Limelight';font-size:clamp(19px,3vw,28px)}
+.foot .fine{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.18em;color:var(--grey);margin-top:12px;line-height:2}
+
+@media(max-width:820px){
+  .columns{grid-template-columns:1fr}
+  .col{padding:22px 0}
+  .col+.col{border-left:none;border-top:1px solid var(--ink);padding-left:0}
+  .tray{grid-template-columns:repeat(2,1fr)}
+  .controls-row{grid-template-columns:1fr}
+  .ledger,.ledger.r{text-align:center}
+  .fan{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .cart.playing .rec-disc,.classified span{animation:none}
+}
+</style>
+</head>
+<body>
+
+<input type="file" id="fileInput" accept="audio/*" multiple hidden>
+
+<div class="page">
+
+  <!-- MASTHEAD -->
+  <div class="top-rule mono"><span>VOL. XXVI — No. 07</span><span>ONE HUNDRED TRACKS WITHIN</span><span>PRICE: ONE SUNDAY</span></div>
+  <div class="masthead">
+    <svg class="fan l" viewBox="0 0 100 100"><g stroke="#141210" fill="none" stroke-width="2">
+      <path d="M10 90 L10 30"/><path d="M10 90 L30 20"/><path d="M10 90 L55 18"/><path d="M10 90 L78 28"/><path d="M10 90 L90 50"/>
+      <circle cx="10" cy="90" r="6" fill="#141210"/></g></svg>
+    <svg class="fan r" viewBox="0 0 100 100"><g stroke="#141210" fill="none" stroke-width="2">
+      <path d="M10 90 L10 30"/><path d="M10 90 L30 20"/><path d="M10 90 L55 18"/><path d="M10 90 L78 28"/><path d="M10 90 L90 50"/>
+      <circle cx="10" cy="90" r="6" fill="#141210"/></g></svg>
+    <h1>The Sunday Gazette</h1>
+    <div class="mast-rule"><div class="diamond"></div></div>
+    <div class="sub">The No-Rap Edition · Est. 2002</div>
+  </div>
+  <div class="dateline mono"><span>SUNDAY MORNING</span><span>★ ★ ★ FINAL PRESSING ★ ★ ★</span><span id="dateSlot">CITY DESK</span></div>
+
+  <!-- HEADLINE -->
+  <div class="headline">
+    <div class="kicker mono">EXTRA · EXTRA · READ ALL ABOUT IT</div>
+    <h2>MACHINE PLAYS <em>your</em> RECORDS;<br>SPHERE SEEN <em>dancing</em> TO THE INK</h2>
+    <p class="standfirst">Correspondents confirm: drop any phonograph file upon the contraption below and the orb shall move to your music — no rap permitted on the premises, by order of the editor.</p>
+  </div>
+
+  <!-- THE PRESS -->
+  <div class="press">
+    <div class="corner tl"><svg viewBox="0 0 26 26"><path d="M2 24 V8 Q2 2 8 2 H24"/><path d="M8 24 V12 Q8 8 12 8 H24" stroke-width="1"/></svg></div>
+    <div class="corner tr"><svg viewBox="0 0 26 26"><path d="M2 24 V8 Q2 2 8 2 H24"/><path d="M8 24 V12 Q8 8 12 8 H24" stroke-width="1"/></svg></div>
+    <div class="corner bl"><svg viewBox="0 0 26 26"><path d="M2 24 V8 Q2 2 8 2 H24"/><path d="M8 24 V12 Q8 8 12 8 H24" stroke-width="1"/></svg></div>
+    <div class="corner br"><svg viewBox="0 0 26 26"><path d="M2 24 V8 Q2 2 8 2 H24"/><path d="M8 24 V12 Q8 8 12 8 H24" stroke-width="1"/></svg></div>
+
+    <div class="press-head poiret"><span>The Gramophone Press · Machine No. 1</span><span class="lamp" id="lamp"></span></div>
+
+    <div class="stage" id="screen">
+      <canvas id="glCanvas"></canvas>
+      <div class="halftone"></div>
+      <div class="stage-osd mono"><span id="osdL">AT REST</span><span id="osdR">—</span></div>
+      <div class="stage-title">
+        <div class="t" id="osdTitle"></div>
+        <div class="a poiret" id="osdArtist"></div>
+      </div>
+      <div class="drop-invite" id="dropInvite">
+        <div class="big deco">Drop Your Records Here</div>
+        <div class="small mono">MP3 · WAV · FLAC — NOTHING LEAVES YOUR BROWSER</div>
+        <div class="keys"><span class="kbd">SPACE play</span><span class="kbd">← → skip</span><span class="kbd">↑ ↓ volume</span></div>
+      </div>
+    </div>
+
+    <div class="wave-row">
+      <canvas id="waveCanvas" height="52"></canvas>
+      <div class="wave-time mono">
+        <span id="tElapsed">0:00</span>
+        <span class="mid poiret" id="tStatus">AWAITING THE FIRST RECORD</span>
+        <span id="tTotal">0:00</span>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <div class="ledger mono">RECORD <b id="ledgNo">—</b> OF <b id="ledgTot">—</b><br>MODE: <b id="ledgMode">LINEAR</b></div>
+      <div class="transport">
+        <button class="t-btn tog" id="shufBtn" title="Shuffle">⤨</button>
+        <button class="t-btn" id="prevBtn">⏮</button>
+        <button class="t-btn main" id="playBtn">▶</button>
+        <button class="t-btn" id="nextBtn">⏭</button>
+        <button class="t-btn tog" id="repBtn" title="Repeat">↻</button>
+      </div>
+      <div class="ledger mono r">VOLUME <b id="ledgVol">80%</b><br>ENERGY <b id="ledgE">—</b></div>
+    </div>
+
+    <div class="classified mono">
+      <span>LOST: ONE RAP VERSE — IF FOUND, DO NOT RETURN &nbsp;✦&nbsp; FOR SALE: GENTLY USED SATURDAY, INQUIRE WITHIN &nbsp;✦&nbsp; WANTED: LISTENERS OF FINE TASTE, APPLY EVERY SUNDAY &nbsp;✦&nbsp; NOTICE: THE SPHERE IS NOT RESPONSIBLE FOR SUDDEN CHILLS &nbsp;✦&nbsp; LOST: ONE RAP VERSE — IF FOUND, DO NOT RETURN &nbsp;✦&nbsp; FOR SALE: GENTLY USED SATURDAY, INQUIRE WITHIN &nbsp;✦&nbsp; WANTED: LISTENERS OF FINE TASTE, APPLY EVERY SUNDAY &nbsp;✦&nbsp; NOTICE: THE SPHERE IS NOT RESPONSIBLE FOR SUDDEN CHILLS &nbsp;✦&nbsp;</span>
+    </div>
+  </div>
+
+  <!-- COLUMNS -->
+  <div class="columns">
+    <div class="col">
+      <h3>How the Contraption Works</h3>
+      <div class="rule-orn"><i></i></div>
+      <div class="byline mono">BY OUR TECHNOLOGY CORRESPONDENT</div>
+      <p class="dropcap">Witnesses report that the machine accepts common audio files by the simple act of dropping them upon its viewing glass. The record is read entirely within the visitor's own browser — our engineers confirm not a single byte departs the premises.</p>
+      <p>Once fed, the orb — rendered in fine wireframe and stippled in the halftone manner of this very publication — deforms bodily to the bass, quickens its rings to the middle registers, and scatters ink to the treble. Gentlemen and ladies may seize the orb and turn it by hand.</p>
+    </div>
+    <div class="col">
+      <h3>Notices</h3>
+      <div class="rule-orn"><i></i></div>
+      <p><strong>THE WAVEFORM.</strong> Beneath the glass, the record's true shape is printed bar by bar. Tap any point to travel there at once.</p>
+      <p><strong>THE LEDGER.</strong> Shuffle and repeat may be armed at the buttons flanking the transport. The house keeps count.</p>
+      <p><strong>THE VAULT.</strong> Every record fed to the machine is catalogued below in the classifieds, engraved with its own pressing number.</p>
+    </div>
+  </div>
+
+  <!-- VAULT -->
+  <div class="vault-sec">
+    <div class="vault-head">
+      <h3>The Record Classifieds</h3>
+      <div class="s poiret">Catalogue of Pressings · Click to Play</div>
+    </div>
+    <div class="tray" id="tray"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="foot">
+    <div class="deco-line"><span>✦</span><span>✦ ✦</span><span>✦</span></div>
+    <div class="tag deco">Press Play. It's Sunday.</div>
+    <div class="fine mono">THE SUNDAY GAZETTE · NO-RAP EDITION · PRINTED IN BLACK &amp; WHITE, HEARD IN FULL COLOUR<br>ALL PLAYBACK LOCAL · NO RECORDS WERE HARMED IN THE MAKING OF THIS EDITION</div>
+  </div>
+
+</div>
+
+<script>
+/* date slot */
+document.getElementById('dateSlot').textContent=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}).toUpperCase();
+
+/* ============ AUDIO ENGINE ============ */
+let ctx,analyser,gainNode,srcNode;
+const audio=new Audio();
+let freq=new Uint8Array(128);
+let library=[];let cur=-1,isPlaying=false,volume=.8,shuffle=false,repeat=false;
+
+function ensureCtx(){
+  if(ctx)return;
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  srcNode=ctx.createMediaElementSource(audio);
+  analyser=ctx.createAnalyser();analyser.fftSize=256;analyser.smoothingTimeConstant=.82;
+  gainNode=ctx.createGain();gainNode.gain.value=volume;
+  srcNode.connect(analyser);analyser.connect(gainNode);gainNode.connect(ctx.destination);
+  freq=new Uint8Array(analyser.frequencyBinCount);
+}
+async function decodePeaks(file){
+  try{ensureCtx();
+    const ab=await ctx.decodeAudioData(await file.arrayBuffer());
+    const ch=ab.getChannelData(0),N=220,block=Math.floor(ch.length/N),peaks=new Float32Array(N);
+    for(let i=0;i<N;i++){let m=0;for(let j=0;j<block;j+=16){const v=Math.abs(ch[i*block+j]);if(v>m)m=v}peaks[i]=m}
+    return peaks;
+  }catch(e){return null}
+}
+function addFiles(files){
+  [...files].filter(f=>f.type.startsWith('audio')).forEach(async f=>{
+    const url=URL.createObjectURL(f);
+    const raw=f.name.replace(/\.[^.]+$/,'');
+    const parts=raw.split(/\s*[-–]\s*/);
+    const item={name:parts.length>1?parts.slice(1).join(' – '):raw,
+      artist:parts.length>1?parts[0]:'Artist Unknown',url,dur:0,peaks:null};
+    library.push(item);renderTray();
+    if(cur===-1)loadTrack(library.length-1,true);
+    item.peaks=await decodePeaks(f);
+    if(library[cur]===item)drawWave();
+  });
+}
+function loadTrack(i,autoplay){
+  cur=i;const t=library[i];
+  ensureCtx();audio.src=t.url;
+  document.getElementById('osdTitle').textContent=t.name;
+  document.getElementById('osdArtist').textContent=t.artist;
+  document.getElementById('dropInvite').classList.add('hide');
+  document.getElementById('tStatus').textContent='NOW PRESSING · No. '+String(i+1).padStart(3,'0');
+  updateLedger();renderTray();drawWave();
+  if(autoplay)play();
+}
+function updateLedger(){
+  document.getElementById('ledgNo').textContent=cur>=0?String(cur+1).padStart(2,'0'):'—';
+  document.getElementById('ledgTot').textContent=library.length?String(library.length).padStart(2,'0'):'—';
+  document.getElementById('ledgMode').textContent=(shuffle?'SHUFFLE':'LINEAR')+(repeat?' + REPEAT':'');
+}
+function nextIdx(dir){
+  if(repeat)return cur;
+  if(shuffle&&library.length>1){let n;do{n=Math.floor(Math.random()*library.length)}while(n===cur);return n}
+  return (cur+dir+library.length)%library.length;
+}
+const playBtn=document.getElementById('playBtn'),lamp=document.getElementById('lamp'),osdL=document.getElementById('osdL');
+function play(){if(cur<0)return;ensureCtx();ctx.resume();audio.play();isPlaying=true;
+  playBtn.textContent='⏸';lamp.classList.add('on');osdL.textContent='IN MOTION'}
+function pause(){audio.pause();isPlaying=false;
+  playBtn.textContent='▶';lamp.classList.remove('on');osdL.textContent='AT REST'}
+playBtn.onclick=()=>{if(cur<0){fileInput.click();return}isPlaying?pause():play()};
+document.getElementById('prevBtn').onclick=()=>library.length&&loadTrack(nextIdx(-1),true);
+document.getElementById('nextBtn').onclick=()=>library.length&&loadTrack(nextIdx(1),true);
+document.getElementById('shufBtn').onclick=e=>{shuffle=!shuffle;e.currentTarget.classList.toggle('on',shuffle);updateLedger()};
+document.getElementById('repBtn').onclick=e=>{repeat=!repeat;e.currentTarget.classList.toggle('on',repeat);updateLedger()};
+audio.addEventListener('ended',()=>{if(repeat){audio.currentTime=0;play()}else if(library.length>1)loadTrack(nextIdx(1),true);else pause()});
+audio.addEventListener('loadedmetadata',()=>{if(cur>=0){library[cur].dur=audio.duration;renderTray()}
+  document.getElementById('tTotal').textContent=fmt(audio.duration)});
+function fmt(s){if(!isFinite(s))return'0:00';return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
+
+/* keyboard */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.code==='Space'){e.preventDefault();playBtn.click()}
+  if(e.code==='ArrowRight')document.getElementById('nextBtn').click();
+  if(e.code==='ArrowLeft')document.getElementById('prevBtn').click();
+  if(e.code==='ArrowUp'){e.preventDefault();setVol(volume+.06)}
+  if(e.code==='ArrowDown'){e.preventDefault();setVol(volume-.06)}
+});
+function setVol(v){volume=Math.min(1,Math.max(0,v));if(gainNode)gainNode.gain.value=volume;
+  document.getElementById('ledgVol').textContent=Math.round(volume*100)+'%'}
+
+/* file input + drop */
+const fileInput=document.getElementById('fileInput');
+fileInput.onchange=e=>addFiles(e.target.files);
+const screen=document.getElementById('screen');
+screen.addEventListener('click',()=>{if(cur<0)fileInput.click()});
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();screen.classList.add('dragover')}));
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)screen.classList.remove('dragover')});
+document.addEventListener('drop',e=>{e.preventDefault();screen.classList.remove('dragover');addFiles(e.dataTransfer.files)});
+
+/* ============ WAVEFORM (ink bars) ============ */
+const wc=document.getElementById('waveCanvas'),wctx=wc.getContext('2d');
+function drawWave(){
+  const w=wc.width=wc.offsetWidth*devicePixelRatio,h=wc.height=52*devicePixelRatio;
+  wctx.clearRect(0,0,w,h);
+  const t=cur>=0?library[cur]:null;
+  const prog=(t&&audio.duration)?audio.currentTime/audio.duration:0;
+  const N=220,bw=w/N;
+  for(let i=0;i<N;i++){
+    const p=t&&t.peaks?t.peaks[i]:.05+.04*Math.sin(i*.28);
+    const bh=Math.max(2,p*h*.86),x=i*bw,y=(h-bh)/2;
+    if(i/N<prog){wctx.fillStyle='#141210';wctx.fillRect(x+bw*.18,y,bw*.64,bh)}
+    else{wctx.strokeStyle='#141210';wctx.lineWidth=1;wctx.globalAlpha=.55;
+      wctx.strokeRect(x+bw*.18,y,bw*.64,bh);wctx.globalAlpha=1}
+  }
+  /* playhead needle */
+  if(t&&audio.duration){const x=prog*w;
+    wctx.fillStyle='#141210';
+    wctx.beginPath();wctx.moveTo(x-5*devicePixelRatio,0);wctx.lineTo(x+5*devicePixelRatio,0);wctx.lineTo(x,7*devicePixelRatio);wctx.fill();
+  }
+}
+new ResizeObserver(drawWave).observe(wc);
+wc.addEventListener('click',e=>{if(!audio.duration)return;
+  const r=wc.getBoundingClientRect();audio.currentTime=(e.clientX-r.left)/r.width*audio.duration});
+setInterval(()=>{if(audio.duration){drawWave();
+  document.getElementById('tElapsed').textContent=fmt(audio.currentTime)}},200);
+
+/* ============ TRAY — engraved record ads ============ */
+const tray=document.getElementById('tray');
+function recordSVG(t,i){
+  const grooves=[...Array(7)].map((_,g)=>`<circle cx="60" cy="60" r="${18+g*5.5}" fill="none" stroke="#141210" stroke-width="1" opacity="${.8-g*.09}"/>`).join('');
+  const rays=[...Array(12)].map((_,r)=>{const a=r*30*Math.PI/180;
+    return `<line x1="${60+Math.cos(a)*52}" y1="${60+Math.sin(a)*52}" x2="${60+Math.cos(a)*58}" y2="${60+Math.sin(a)*58}" stroke="#141210" stroke-width="1.5"/>`}).join('');
+  return `<svg class="rec-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    ${rays}
+    <g class="rec-disc">${grooves}
+      <circle cx="60" cy="60" r="14" fill="none" stroke="#141210" stroke-width="1.5"/>
+      <circle cx="60" cy="60" r="3" fill="#141210"/>
+      <path d="M60 46 A14 14 0 0 1 74 60" fill="none" stroke="#141210" stroke-width="1"/>
+    </g>
+  </svg>`;
+}
+function renderTray(){
+  tray.innerHTML='';
+  if(!library.length){
+    const e=document.createElement('div');e.className='tray-empty';
+    e.textContent='The classifieds await your first record. Click here or drop files above.';
+    e.onclick=()=>fileInput.click();tray.appendChild(e);return;
+  }
+  library.forEach((t,i)=>{
+    const el=document.createElement('div');
+    el.className='cart'+(i===cur?' playing':'');
+    el.innerHTML=`${recordSVG(t,i)}
+      <div class="c-no mono">PRESSING No. ${String(i+1).padStart(3,'0')}</div>
+      <div class="c-title">${t.name}</div>
+      <div class="c-artist poiret">${t.artist}</div>
+      <div class="c-dur mono">${t.dur?fmt(t.dur):'--:--'} RUNNING TIME</div>`;
+    el.onclick=()=>loadTrack(i,true);
+    tray.appendChild(el);
+  });
+  const add=document.createElement('div');add.className='add-card';
+  add.innerHTML='<span class="plus deco">+</span>SUBMIT A RECORD';
+  add.onclick=()=>fileInput.click();tray.appendChild(add);
+}
+renderTray();
+
+/* ============ THE ORB — B&W engraving visualizer ============ */
+const canvas=document.getElementById('glCanvas');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,16/8.6,.1,100);camera.position.z=6.2;
+const group=new THREE.Group();scene.add(group);
+const INK=0x141210;
+
+const uniforms={uTime:{value:0},uBass:{value:0},uMid:{value:0}};
+/* wireframe sphere, ink lines on paper */
+const wireMat=new THREE.ShaderMaterial({uniforms,wireframe:true,transparent:true,
+  vertexShader:`uniform float uTime;uniform float uBass;uniform float uMid;
+    void main(){
+      float d=sin(position.x*4.0+uTime*2.0)*sin(position.y*4.0-uTime*1.4)*sin(position.z*4.0+uTime);
+      float disp=uBass*.4*d+uMid*.12*sin(position.y*10.0+uTime*3.0);
+      gl_Position=projectionMatrix*modelViewMatrix*vec4(position+normal*disp,1.0);}`,
+  fragmentShader:`void main(){gl_FragColor=vec4(0.078,0.07,0.062,0.9);}`});
+const sphere=new THREE.Mesh(new THREE.SphereGeometry(1.5,40,28),wireMat);
+group.add(sphere);
+/* inner solid paper sphere to occlude back lines (engraved depth) */
+const occ=new THREE.Mesh(new THREE.SphereGeometry(1.47,40,28),
+  new THREE.MeshBasicMaterial({color:0xf2efe6}));
+group.add(occ);
+
+/* concentric deco rings */
+const rings=[];
+[2.05,2.4,2.75].forEach((r,i)=>{
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.012,6,120),
+    new THREE.MeshBasicMaterial({color:INK,transparent:true,opacity:.85-i*.2}));
+  ring.rotation.x=Math.PI/2+i*.32;ring.rotation.y=i*.5;
+  group.add(ring);rings.push(ring);
+});
+/* stipple particles — ink dots */
+const P=420,pGeo=new THREE.BufferGeometry(),pPos=new Float32Array(P*3);
+for(let i=0;i<P;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=3+Math.random()*1.1;
+  pPos[i*3]=r*Math.sin(ph)*Math.cos(th);pPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pPos[i*3+2]=r*Math.cos(ph)}
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const pMat=new THREE.PointsMaterial({color:INK,size:.028,transparent:true,opacity:.5});
+group.add(new THREE.Points(pGeo,pMat));
+
+let drag=false,px=0,py=0,rY=0,rX=.1;
+canvas.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY});
+window.addEventListener('pointerup',()=>drag=false);
+window.addEventListener('pointermove',e=>{if(!drag)return;rY+=(e.clientX-px)*.005;rX+=(e.clientY-py)*.005;px=e.clientX;py=e.clientY});
+const bursts=[];
+canvas.addEventListener('click',()=>{if(cur<0)return;
+  const b=new THREE.Mesh(new THREE.RingGeometry(1.5,1.53,64),
+    new THREE.MeshBasicMaterial({color:INK,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+  b.userData.age=0;group.add(b);bursts.push(b)});
+
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);
+  camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(canvas);resize();
+
+function band(lo,hi){let s=0;for(let i=lo;i<hi;i++)s+=freq[i];return s/((hi-lo)*255)}
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let peakHz=0;
+function tick(t){
+  if(analyser&&isPlaying){analyser.getByteFrequencyData(freq);
+    let mi=0;for(let i=1;i<freq.length;i++)if(freq[i]>freq[mi])mi=i;
+    peakHz=Math.round(mi*(ctx.sampleRate/2)/freq.length)}
+  else for(let i=0;i<freq.length;i++)freq[i]*=.92;
+
+  const bass=band(1,8),mid=band(8,40),high=band(40,110);
+  uniforms.uTime.value=t*.001;
+  uniforms.uBass.value+=(bass-uniforms.uBass.value)*.18;
+  uniforms.uMid.value+=(mid-uniforms.uMid.value)*.18;
+
+  const spin=reduceMotion?.4:1;
+  rings.forEach((r,i)=>{if(!drag)r.rotation.z+=(.002+mid*.02)*spin*(i%2?1:-1)});
+  pMat.opacity=.25+high*.7;pMat.size=.028+bass*.02;
+  group.rotation.y=rY+t*.00005*spin;group.rotation.x=rX;
+
+  for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];b.userData.age+=.02;
+    b.scale.setScalar(1+b.userData.age*2.2);b.material.opacity=.9-b.userData.age*.9;
+    if(b.userData.age>1){group.remove(b);bursts.splice(i,1)}}
+
+  if(isPlaying){document.getElementById('osdR').textContent=`${peakHz} Hz`;
+    document.getElementById('ledgE').textContent=Math.round(bass*100)+'%'}
+  renderer.render(scene,camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
